@@ -181,9 +181,8 @@ generate_builder = true
     name = "set"
     manual = true # use ToValue
     [[object.function]]
-    name = "read_async"
-    manual = true # array
-
+    pattern = "(read|read_texture|read_text|read_value|store)_async"
+    manual = true # don't enforce Send
 [[object]]
 name = "Gdk.ContentDeserializer"
 status = "generate"
