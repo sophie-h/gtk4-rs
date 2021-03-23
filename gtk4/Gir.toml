@@ -874,10 +874,10 @@ manual_traits = ["EntryBufferExtManual"]
     manual = true
     [[object.signal]]
     name = "deleted-text"
-    ignore = true # TODO: implement me
+    ignore = true
     [[object.signal]]
     name = "inserted-text"
-    ignore = true # TODO: implement me
+    ignore = true
 
 [[object]]
 name = "Gtk.EntryCompletion"

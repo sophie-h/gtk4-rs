@@ -1,9 +1,12 @@
 // Take a look at the license at the top of the repository in the LICENSE file.
 
 use crate::EntryBuffer;
-use glib::object::IsA;
 use glib::translate::*;
+use glib::{object::IsA, SignalHandlerId};
+use glib::{signal::connect_raw, Cast};
 use libc::{c_int, c_uint};
+use std::boxed::Box as Box_;
+use std::mem::transmute;
 
 impl EntryBuffer {
     #[doc(alias = "gtk_entry_buffer_new")]
@@ -42,6 +45,13 @@ pub trait EntryBufferExtManual: 'static {
 
     #[doc(alias = "gtk_entry_buffer_set_text")]
     fn set_text(&self, chars: &str);
+
+    fn connect_deleted_text<F: Fn(&Self, u16, u16) + 'static>(&self, f: F) -> SignalHandlerId;
+
+    fn connect_inserted_text<F: Fn(&Self, u16, &str, u16) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId;
 }
 
 macro_rules! to_u16 {
@@ -123,6 +133,69 @@ impl<O: IsA<EntryBuffer>> EntryBufferExtManual for O {
                 chars.to_glib_none().0,
                 -1,
             );
+        }
+    }
+
+    fn connect_deleted_text<F: Fn(&Self, u16, u16) + 'static>(&self, f: F) -> SignalHandlerId {
+        unsafe extern "C" fn deleted_text_trampoline<P, F: Fn(&P, u16, u16) + 'static>(
+            this: *mut ffi::GtkEntryBuffer,
+            position: libc::c_uint,
+            n_chars: libc::c_uint,
+            f: glib::ffi::gpointer,
+        ) where
+            P: IsA<EntryBuffer>,
+        {
+            let f: &F = &*(f as *const F);
+            f(
+                &EntryBuffer::from_glib_borrow(this).unsafe_cast_ref(),
+                to_u16!(position),
+                to_u16!(n_chars),
+            )
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"deleted-text\0".as_ptr() as *const _,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    deleted_text_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
+        }
+    }
+
+    fn connect_inserted_text<F: Fn(&Self, u16, &str, u16) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn inserted_text_trampoline<P, F: Fn(&P, u16, &str, u16) + 'static>(
+            this: *mut ffi::GtkEntryBuffer,
+            position: libc::c_uint,
+            chars: *mut libc::c_char,
+            n_chars: libc::c_uint,
+            f: glib::ffi::gpointer,
+        ) where
+            P: IsA<EntryBuffer>,
+        {
+            let f: &F = &*(f as *const F);
+            f(
+                &EntryBuffer::from_glib_borrow(this).unsafe_cast_ref(),
+                to_u16!(position),
+                &glib::GString::from_glib_borrow(chars),
+                to_u16!(n_chars),
+            )
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"inserted-text\0".as_ptr() as *const _,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    inserted_text_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
         }
     }
 }
