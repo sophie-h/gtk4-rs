@@ -1028,12 +1028,14 @@ pub unsafe trait WidgetClassSubclassExt: ClassStruct {
         signal_name: &str,
         arguments: Option<&glib::Variant>,
     ) {
-        let shortcut = crate::Shortcut::new(
-            Some(&crate::KeyvalTrigger::new(keyval, mods)),
-            Some(&crate::SignalAction::new(signal_name)),
-        );
-        shortcut.set_arguments(arguments);
-        self.add_shortcut(&shortcut);
+        let type_ = <Self::Type as ObjectSubclassType>::get_type();
+        let signal_id = glib::subclass::SignalId::lookup(signal_name, type_).unwrap_or_else(|| {
+            panic!(
+                "Signal '{}' doesn't exists for type '{}'",
+                signal_name, type_
+            );
+        });
+        self.add_binding_signal_id(keyval, mods, signal_id, arguments);
     }
 
     #[doc(alias = "gtk_widget_class_add_binding_signal")]
@@ -1095,6 +1097,13 @@ pub unsafe trait WidgetClassSubclassExt: ClassStruct {
 
     #[doc(alias = "gtk_widget_class_set_activate_signal_from_name")]
     fn set_activate_signal_from_name(&mut self, signal_name: &str) {
+        let type_ = <Self::Type as ObjectSubclassType>::get_type();
+        if glib::subclass::SignalId::lookup(signal_name, type_).is_none() {
+            panic!(
+                "Signal '{}' doesn't exists for type '{}'",
+                signal_name, type_
+            );
+        }
         unsafe {
             let widget_class = self as *mut _ as *mut ffi::GtkWidgetClass;
             ffi::gtk_widget_class_set_activate_signal_from_name(
