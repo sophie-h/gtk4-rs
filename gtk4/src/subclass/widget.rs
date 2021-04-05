@@ -983,6 +983,75 @@ pub unsafe trait WidgetClassSubclassExt: ClassStruct {
         }
     }
 
+    #[doc(alias = "gtk_widget_class_add_binding")]
+    fn add_binding<
+        F: Fn(&<<Self as ClassStruct>::Type as ObjectSubclass>::Type, Option<&Variant>) -> bool
+            + 'static,
+    >(
+        &mut self,
+        keyval: gdk::keys::Key,
+        mods: gdk::ModifierType,
+        callback: F,
+        arguments: Option<&glib::Variant>,
+    ) {
+        let shortcut = crate::Shortcut::new(
+            Some(&crate::KeyvalTrigger::new(keyval, mods)),
+            Some(&crate::CallbackAction::new(move |widget, args| -> bool {
+                unsafe { callback(widget.unsafe_cast_ref(), args) }
+            })),
+        );
+        shortcut.set_arguments(arguments);
+        self.add_shortcut(&shortcut);
+    }
+
+    #[doc(alias = "gtk_widget_class_add_binding_action")]
+    fn add_binding_action(
+        &mut self,
+        keyval: gdk::keys::Key,
+        mods: gdk::ModifierType,
+        action_name: &str,
+        arguments: Option<&glib::Variant>,
+    ) {
+        let shortcut = crate::Shortcut::new(
+            Some(&crate::KeyvalTrigger::new(keyval, mods)),
+            Some(&crate::NamedAction::new(action_name)),
+        );
+        shortcut.set_arguments(arguments);
+        self.add_shortcut(&shortcut);
+    }
+
+    #[doc(alias = "gtk_widget_class_add_binding_signal")]
+    fn add_binding_signal(
+        &mut self,
+        keyval: gdk::keys::Key,
+        mods: gdk::ModifierType,
+        signal_name: &str,
+        arguments: Option<&glib::Variant>,
+    ) {
+        let shortcut = crate::Shortcut::new(
+            Some(&crate::KeyvalTrigger::new(keyval, mods)),
+            Some(&crate::SignalAction::new(signal_name)),
+        );
+        shortcut.set_arguments(arguments);
+        self.add_shortcut(&shortcut);
+    }
+
+    #[doc(alias = "gtk_widget_class_add_binding_signal")]
+    fn add_binding_signal_id(
+        &mut self,
+        keyval: gdk::keys::Key,
+        mods: gdk::ModifierType,
+        signal: glib::subclass::SignalId,
+        arguments: Option<&glib::Variant>,
+    ) {
+        let shortcut = crate::Shortcut::new(
+            Some(&crate::KeyvalTrigger::new(keyval, mods)),
+            Some(&crate::SignalAction::new(signal.name())),
+        );
+        shortcut.set_arguments(arguments);
+        self.add_shortcut(&shortcut);
+    }
+
     #[doc(alias = "gtk_widget_class_add_shortcut")]
     fn add_shortcut(&mut self, shortcut: &Shortcut) {
         unsafe {
